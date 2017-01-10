@@ -10,31 +10,34 @@ var scOSC = new osc.UDPPort({
 	remoteAddress: "127.0.0.1",
 	remotePort: 9010
 })
+scOSC.open();
 
 var wekBlueOSC = new osc.UDPPort({
 	localAddress: "0.0.0.0",
-	localPort: 9001,
+	localPort: 9001, //won't use this...
 	remoteAddress: "127.0.0.1",
 	remotePort: 9002 // this is wat wek should listen on
 })
 wekBlueOSC.open();
+
 var wekRedOSC = new osc.UDPPort({
 	localAddress: "0.0.0.0",
-	localPort: 9011,
-	remoteAddress: "127.0.0.1",
-	remotePort: 9666 // this is wat wek should listen on
-})
-wekRedOSC.open();
-var wekGreenOSC = new osc.UDPPort({
-	localAddress: "0.0.0.0",
-	localPort: 9021,
+	localPort: 9011, //won't use this...
 	remoteAddress: "127.0.0.1",
 	remotePort: 9004 // this is wat wek should listen on
 })
+wekRedOSC.open();
+
+var wekGreenOSC = new osc.UDPPort({
+	localAddress: "0.0.0.0",
+	localPort: 9012, //won't use this...
+	remoteAddress: "127.0.0.1",
+	remotePort: 9006 // this is wat wek should listen on
+})
 wekGreenOSC.open();
 
+// @ time weighted averages 
 
-scOSC.open();
 
 // uses current directory
 expressServer.use(express.static(__dirname));
@@ -58,7 +61,7 @@ var numClients=0;
 
 wsServer.on('connection', function(r){
 	id=id+1;
-	console.log("@@@@@@@@@@@@@@@@@@@ ID:  "+id)
+	console.log("_____________________ ID:  "+id)
 	
 	numClients++;
 	
@@ -67,11 +70,9 @@ wsServer.on('connection', function(r){
 	blueTeam++;
 	r.closingFlag=false;
 	//Default setting
-	clients[id]={team:"Blue", client: r, xyz:[0,0,0], motion:0};
+	clients[id]={team:"Blue", client: r, xyz:[0,0,0], motion:0, motionShort:0, motionMedium:0, motionLong:0};
 
 	console.log((new Date())+ 'Connection accepted, id: '+ id);
-	//Tell SuperCollider how many clients there are
-	scOSC.send({address:"/connect", args: []});
 
 
 	r.on('message',function(message){
@@ -83,6 +84,11 @@ wsServer.on('connection', function(r){
 				clients[r.identifier].xyz = [msg.xyz[0],msg.xyz[1],msg.xyz[2]]
 				// where motion = a cooked measure of jerk (change in acceleration)
 				clients[r.identifier].motion = msg.motion;
+				clients[r.identifier].motionShort = msg.motionShort
+				clients[r.identifier].motionMedium = msg.motionMedium 
+				clients[r.identifier].motionLong = msg.motionLong
+
+				// console.log("#uncooked:  " +msg.motion)
 			}
 			catch(e){
 				console.log("WARNING: motion update dropped for: "+id)
@@ -95,13 +101,13 @@ wsServer.on('connection', function(r){
 		//@Do I use the team counters for anythign?/should they be updated here again?
 		else if (msg.type == 'teamChange'){
 			if(msg.value == "Blue") {
-				clients[id].team = "Blue"
+				clients[r.identifier].team = "Blue"
 			}
 			else if (msg.value == "Red") {
-				clients[id].team = "Red"
+				clients[r.identifier].team = "Red"
 			}
 			else if (msg.value == "Green") {
-				clients[id].team = "Green"
+				clients[r.identifier].team = "Green"
 			}
 
 		}
@@ -130,21 +136,30 @@ wsServer.on('connection', function(r){
 	})
 	//identifier of the client. also increments the counter
 	
-})
+});
 
 setInterval(function(){
 	var blueMotionArray = []
-	var blueXArray = []
-	var blueYArray = []
-	var blueZArray = [];
+	var blueMotionShortArray = []
+	var blueMotionMediumArray = []
+	var blueMotionLongArray = []
+	// var blueXArray = []
+	// var blueYArray = []
+	// var blueZArray = [];
 	var redMotionArray = []
-	var redXArray = []
-	var redYArray = []
-	var redZArray = [];
+	var redMotionShortArray = []
+	var redMotionMediumArray = []
+	var redMotionLongArray = []
+	// var redXArray = []
+	// var redYArray = []
+	// var redZArray = [];
 	var greenMotionArray = []
-	var greenXArray = []
-	var greenYArray = []
-	var greenZArray = [];
+	var greenMotionShortArray = []
+	var greenMotionMediumArray = []
+	var greenMotionLongArray = []
+	// var greenXArray = []
+	// var greenYArray = []
+	// var greenZArray = [];
 
 
 	// var numClients = Object.keys(motion).length;
@@ -152,40 +167,53 @@ setInterval(function(){
 		var i = clients[ids]
 		if(i.team =="Blue"){
 			blueMotionArray.push(parseFloat(i.motion));
+			blueMotionShortArray.push(parseFloat(i.motionShort));
+			blueMotionMediumArray.push(parseFloat(i.motionMedium));
+			blueMotionLongArray.push(parseFloat(i.motionLong));
 			// blueXMean = blueXMean+Math.abs(parseFloat(i.xyz[0]));
 			// blueYMean = blueYMean+Math.abs(parseFloat(i.xyz[1]));
-			// blueZMean = blueZMean+Math.abs(parseFloat(i.xyz[2]));
-			blueXArray.push(Math.abs(parseFloat(i.xyz[0])));
-			blueYArray.push(Math.abs(parseFloat(i.xyz[1])));
-			blueZArray.push(Math.abs(parseFloat(i.xyz[2])));
+			// // blueZMean = blueZMean+Math.abs(parseFloat(i.xyz[2]));
+			// blueXArray.push(Math.abs(parseFloat(i.xyz[0])));
+			// blueYArray.push(Math.abs(parseFloat(i.xyz[1])));
+			// blueZArray.push(Math.abs(parseFloat(i.xyz[2])));
 		}
 		else if (i.team =="Red"){
 			console.log("red    :")
 			redMotionArray.push(parseFloat(i.motion));
+			redMotionShortArray.push(parseFloat(i.motionShort));
+			redMotionMediumArray.push(parseFloat(i.motionMedium));
+			redMotionLongArray.push(parseFloat(i.motionLong));
 			// redXMean = redXMean+Math.abs(parseFloat(i.xyz[0]));
 			// redYMean = redYMean+Math.abs(parseFloat(i.xyz[1]));
 			// redZMean = redZMean+Math.abs(parseFloat(i.xyz[2]));
-			redXArray.push(Math.abs(parseFloat(i.xyz[0])));
-			redYArray.push(Math.abs(parseFloat(i.xyz[1])));
-			redZArray.push(Math.abs(parseFloat(i.xyz[2])));
+			// redXArray.push(Math.abs(parseFloat(i.xyz[0])));
+			// redYArray.push(Math.abs(parseFloat(i.xyz[1])));
+			// redZArray.push(Math.abs(parseFloat(i.xyz[2])));
 		}
 		else if (i.team=="Green"){
 			greenMotionArray.push(parseFloat(i.motion));
+			greenMotionShortArray.push(parseFloat(i.motionShort));
+			greenMotionMediumArray.push(parseFloat(i.motionMedium));
+			greenMotionLongArray.push(parseFloat(i.motionLong));
 			// greenXMean = greenXMean+Math.abs(parseFloat(i.xyz[0]));
 			// greenYMean = greenYMean+Math.abs(parseFloat(i.xyz[1]));
 			// greenZMean = greenZMean+Math.abs(parseFloat(i.xyz[2]));
-			greenXArray.push(Math.abs(parseFloat(i.xyz[0])));
-			greenYArray.push(Math.abs(parseFloat(i.xyz[1])));
-			greenZArray.push(Math.abs(parseFloat(i.xyz[2])));
+			// greenXArray.push(Math.abs(parseFloat(i.xyz[0])));
+			// greenYArray.push(Math.abs(parseFloat(i.xyz[1])));
+			// greenZArray.push(Math.abs(parseFloat(i.xyz[2])));
 			
 		}
 	}	
 
-	// function sendData(motionArray, xArray, yArray, zArray, team){
-	sendData(blueMotionArray, blueXArray, blueYArray, blueZArray, "Blue")
-	sendData(greenMotionArray, greenXArray, greenYArray, greenZArray, "Green")
-	sendData(redMotionArray, redXArray, redYArray, redZArray, "Red")
 
+	sendData(blueMotionArray, blueMotionShortArray, blueMotionMediumArray, blueMotionLongArray, "Blue") 
+	sendData(redMotionArray, redMotionShortArray, redMotionMediumArray, redMotionLongArray, "Red") 
+	sendData(greenMotionArray, greenMotionShortArray, greenMotionMediumArray, greenMotionLongArray, "Green") 
+
+
+	// sendData(blueMotionArray,blueMotionShortArray,blueMotionLongArray, blueXArray, blueYArray, blueZArray, "Blue")
+	// sendData(greenMotionArray, greenXArray, greenYArray, greenZArray, "Green")
+	// sendData(redMotionArray, redXArray, redYArray, redZArray, "Red")
 	// try{scOSC.send(blueMsg);scOSC.send(redMsg)}
 	// catch(e){console.log("error sending OSC for motion")}
 
@@ -194,136 +222,75 @@ setInterval(function(){
 
 //@ Long dimension to variance: what kind of variance is happening over the past x Long?
 // ex: mean over window, max and min over window, slope over window, etc...
- 
-var bxvar = [0,0,0,0,0,0,0,0,0,0];
-var byvar = [0,0,0,0,0,0,0,0,0,0];
-var bzvar = [0,0,0,0,0,0,0,0,0,0];
+//function sendData(motionArray, motionShortArray, motionMediumArray, motionLongArray, xArray, yArray, zArray, team){
 
-var gxvar = [0,0,0,0,0,0,0,0,0,0];
-var gyvar = [0,0,0,0,0,0,0,0,0,0];
-var gzvar = [0,0,0,0,0,0,0,0,0,0];
-
-var rxvar = [0,0,0,0,0,0,0,0,0,0];
-var ryvar = [0,0,0,0,0,0,0,0,0,0];
-var rzvar = [0,0,0,0,0,0,0,0,0,0];
-
-
-function sendData(motionArray, xArray, yArray, zArray, team){
-	var motionMean = motionVariance = xMean = xVariance = yMean = yVariance = zMean = zVariance = xVarLong=yVarLong=zVarLong= xVarShort=yVarShort=zVarShort= 0;
+function sendData(motionArray, motionShortArray, motionMediumArray, motionLongArray, team){
+	var motionMean = motionVariance = motionShortMean = motionShortVariance = motionMediumMean = motionMediumVariance = motionLongMean = motionLongVariance = 0//= xMean = xVariance = yMean = yVariance = zMean = zVariance = xVarLong=yVarLong=zVarLong= xVarShort=yVarShort=zVarShort= 0;
 
 	//Calculates mean motion
 	for (var val in motionArray){
 		motionMean = motionMean + motionArray[val];
+		motionShortMean = motionShortMean+motionShortArray[val]
+		motionMediumMean = motionMediumMean+motionMediumArray[val]
+		motionLongMean = motionLongMean + motionLongArray[val]
 	}
-
 	if(motionArray.length!=0) {
-		motionMean = (motionMean/motionArray.length)
+		motionMean = motionMean/motionArray.length
+		motionMediumMean = motionMediumMean/motionMediumArray.length
+		motionShortMean = motionShortMean/motionShortArray.length
+		motionLongMean = motionLongMean/motionLongArray.length
 	}
-	else {motionMean = 0;}
+	else {motionMean = motionShortMean = motionLongMean = motionMediumMean = 0;}
 
 	//Calculates motion variance
 	for (var val in motionArray){
 		motionVariance = motionVariance+(motionArray[val]-motionMean)*(motionArray[val]-motionMean)
+		motionShortVariance = motionShortVariance + (motionShortArray[val]-motionShortMean)*(motionShortArray[val]-motionShortMean)
+		motionMediumVariance = motionMediumVariance + (motionMediumArray[val]-motionMediumMean)*(motionMediumArray[val]-motionMediumMean)
+		motionLongVariance = motionLongVariance + (motionLongArray[val]-motionLongMean)*(motionLongArray[val]-motionLongMean)
 	}	
-	if(motionArray.length!=0) {motionVariance = motionVariance/motionArray.length}
-	else {motionVariance = 0;}
+	if(motionArray.length!=0) {
+		motionVariance = motionVariance/motionArray.length; 
+		motionShortVariance=motionShortVariance/motionShortArray.length;
+		motionMediumVariance = motionMediumVariance/motionMediumArray.length;
+		motionLongVariance= motionLongVariance/motionLongArray.length;
+	}
+	else {motionVariance = motionShortVariance = motionLongVariance = motionMediumVariance = 0;}
 	
 	//Normalize it.
-	motionMean = Math.min((motionMean)/30,1)
-
-		
-
-	//Calculates x, y, and z means
-	for (var val in xArray){
-		xMean = xMean + xArray[val];
-		yMean = yMean + yArray[val];
-		zMean = zMean + zArray[val];
-	}
-	if(xArray.length!=0) {
-		xMean = xMean/xArray.length
-		yMean = yMean/yArray.length
-		zMean = zMean/zArray.length
-	}
-	else {
-		xMean = yMean = zMean = 0;
-	}
-
-	//Calculates variance in x, y, and z's
-	for (var val in xArray){
-		xVariance = xVariance + (xArray[val]-xMean)*(xArray[val]-xMean)
-		yVariance = yVariance + (yArray[val]-yMean)*(yArray[val]-yMean)
-		zVariance = zVariance + (zArray[val]-zMean)*(zArray[val]-zMean)
-	}
-	if (xArray.length !=0){
-		xVariance = xVariance/xArray.length;
-		yVariance = yVariance/yArray.length;
-		zVariance = zVariance/zArray.length;
-	}
-	else{
-		xVariance = yVariance = zVariance = 0;
-	}
+	// motionMean = Math.min((motionMean)/30,1)
+	// motionShortMean = Math.min((motionShortMean)/30,1)
+	// motionLongMean = Math.min((motionLongMean)/30,1)
+	motionMean = Math.round(motionMean*10)/10
+	motionShortMean = Math.round(motionShortMean*10)/10
+	motionMediumMean = Math.round(motionMediumMean*10)/10
+	motionLongMean = Math.round(motionLongMean*10)/10
 
 
-
-	if (team=="Blue"){
-		bxvar.push(xVariance)
-		//10 items == approx. every half second
-		var ar
-		ar = bxvar.slice(-10)
-		xVarLong = mean(ar)
-		ar = bxvar.slice(-5)
-		xVarShort= mean(ar)
-		
-		byvar.push(yVariance)
-		ar = byvar.slice(-10)
-		yVarLong = mean(ar)
-		ar = byvar.slice(-5)
-		yVarShort = mean(ar)
-		bzvar.push(zVariance)
-		ar = bzvar.slice(-10)
-		zVarLong = mean(ar)
-		ar = bzvar.slice(-5)
-		zVarShort = mean(ar)
-	}
-	else if (team =="Green"){
-		gxvar.push(xVariance)
-		//10 items == approx. every half second
-		gxvar = gxvar.slice(-10)
-		xVarLong = mean(gxvar)
-		gyvar.push(yVariance)
-		gyvar = gyvar.slice(-10)
-		yVarLong = mean(gyvar)
-		gzvar.push(zVariance)
-		gzvar = gzvar.slice(-10)
-		zVarLong = mean(gzvar)
-	}
-	else if (team == "Red"){
-		rxvar.push(xVariance)
-		//10 items == approx. every half second
-		rxvar = rxvar.slice(-10)
-		xVarLong = mean(rxvar)
-		ryvar.push(yVariance)
-		ryvar = ryvar.slice(-10)
-		yVarLong = mean(ryvar)
-		rzvar.push(zVariance)
-		rzvar = rzvar.slice(-10)
-		zVarLong = mean(rzvar)
-	}
-	else{ console.log("hmm.....")}
-
-	// zVariance = Math.abs(zVariance-zVarianceI);
-	// zVarianceI=zVariance;
-	console.log("x:  "+xVariance);
-	console.log("y:  "+yVariance);
-	console.log("z:  "+zVariance);
+	console.log("###############     team:    "+team)
 	console.log("team n:  "+motionArray.length)
+	console.log("motionMean:  "+motionMean)
+	console.log("motionShortMean:  "+motionShortMean)
+	console.log("motionMediumMean:  "+motionMediumMean)
+	console.log("motionLongMean:  "+motionLongMean)
+
 	console.log("motion Variance: "+motionVariance)
-	console.log("mean:  "+motionMean)
-	console.log("team:  "+team)
-	
+	console.log("motionShortVariance:  "+motionShortVariance)
+	console.log("motionMediumVariance:  "+motionMediumVariance)
+	console.log("motionLongVariance:  "+motionLongVariance)
+	console.log("---------------- Difference (long to inst.):  "+(motionLongMean-motionMean))
+
+	// @Are we including means?
+	// var coherenceMsg = {
+	// 	address: "/wek/"+team,
+	// 	args: [motionVariance, motionMean, motionShortMean, motionShortVariance, motionMediumMean, motionMediumVariance, motionLongMean, motionLongVariance]
+	// }
+
+//@ exclusion/expirey tag on data based on time
+
 	var coherenceMsg = {
 		address: "/wek/"+team,
-		args: [motionVariance, xVariance, yVariance, zVariance,xVarLong,yVarLong,zVarLong,xVarShort,yVarShort,zVarShort]
+		args: [motionVariance,motionShortVariance,motionMediumVariance,motionLongVariance]
 	}
 
 	var motionMsg = {
@@ -337,11 +304,10 @@ function sendData(motionArray, xArray, yArray, zArray, team){
 		else if (team=="Red") {wekRedOSC.send(coherenceMsg)}
 		else if (team == "Green") wekGreenOSC.send(coherenceMsg)
 
-
 		scOSC.send(motionMsg)
 	}
 	catch(e){
-		console.log("error sending OSC to wek:")
+		console.log("error sending OSC")
 		console.log(e)
 		console.log("______________________")
 	}

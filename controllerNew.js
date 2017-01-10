@@ -4,7 +4,7 @@
 // 2. send input from html page to ws server
 // 3. listen to input from wss and distribute it to html page
 
-alert(navigator.)
+
 
 var ws = new WebSocket('ws://'+location.hostname+":"+location.port, 'echo-protocol');
 var motionArray = [0,0,0,0,0];
@@ -62,7 +62,7 @@ function testWebAudio(){
 
 	osc1.frequency.value = 1*crowdPitch;
 	osc2.frequency.value = 2*crowdPitch;
-	osc3.frequency.value = 3*crowdPitch;
+	osc3.frequency.value = 3*crowdPitch;3
 	melodyGain.gain.value = 0;
 
 	osc1.connect(melodyGain);
@@ -73,6 +73,7 @@ function testWebAudio(){
 	osc1.start();
 	osc2.start();
 	osc3.start();
+	console.log("Web Audio Test run")
 
 	// var mod = ac.createOscillator()
 	// mod.frequency.value = crowdPitch*8;
@@ -100,7 +101,6 @@ function teamChange(){
 		value: team
 	}
 	ws.send(JSON.stringify(msg))
-	//@Set ws reponder to listen for messages of that team for 3rd layer
 }
 
 function initUser(){
@@ -167,26 +167,54 @@ ws.addEventListener('message', function(message){
 // @long window
 // @Spherical coordinate system
 // @controll rate at which device motion is collected and sent
+
+var xArray = [0,0,0,0,0,0,0,0,0,0]
+var yArray = [0,0,0,0,0,0,0,0,0,0]
+var zArray = [0,0,0,0,0,0,0,0,0,0]
+var rMedium = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] // n = 80
+var rLong = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] // n = 160
+var rShort = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+// @timestamp it 
+// ring buffer, garbage collection
+// time averages instaed of thsi
 window.addEventListener('devicemotion', function(event) {
-	// var xf = event.accelerationIncludingGravity.x
-	// var yf = event.accelerationIncludingGravity.y
-	// var zf = event.accelerationIncludingGravity.z
-	var xf = event.acceleration.x
-	var yf = event.acceleration.y
-	var zf = event.acceleration.z
-	var deltaX = Math.abs(xf-xi)
-	var deltaY = Math.abs(yf-yi)
-	var deltaZ = Math.abs(zf-zi);
-	var delta = deltaX+deltaY+deltaZ
-	xi = xf;
-	yi = yf
-	zi = zf
-	delta = Math.round(delta*2)/2
-	motionArray
+	var xf = event.accelerationIncludingGravity.x
+	var yf = event.accelerationIncludingGravity.y
+	var zf = event.accelerationIncludingGravity.z
+	var r = Math.sqrt(xf*xf+yf*yf+zf*zf)
+
+	rLong.push(r);
+	rLong = rLong.slice(-160)
+	rMedium.push(r)
+	rMedium = rMedium.slice(-80)
+	rShort.push(r)
+	rShort = rShort.slice(-40)
+
+	//motion -instantaneous, motion short and long are over different windows. 
 	var msg = {
 		type: 'motion',
 		xyz: [xf,yf,zf],
-		motion: delta
+		motion: r,
+		motionShort: mean(rShort),
+		motionMedium: mean(rMedium),
+		motionLong: mean(rLong)
 	}
 	ws.send(JSON.stringify(msg));
+
+// var xf = event.acceleration.x
+	// var yf = event.acceleration.y
+	// var zf = event.acceleration.z
+	// var deltaX = Math.abs(xf-xi)
+	// var deltaY = Math.abs(yf-yi)
+	// var deltaZ = Math.abs(zf-zi);
 });
+
+
+//@there's gotta be a javascript function for this...
+function mean(array){
+	var result=0
+	for (i in array){
+		result=result+array[i]
+	}
+	return result/array.length
+}
